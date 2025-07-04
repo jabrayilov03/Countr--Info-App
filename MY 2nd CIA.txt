@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Country Info App</title>
+  <style>
+    html, body { height:100%; margin:0; }
+    body { 
+      font-family: Arial, sans-serif; 
+      display:flex; 
+      flex-direction:column; 
+      align-items:center; 
+      background-color: #f5f5f5;
+    }
+    .container { 
+      height:180px; 
+      display:flex; 
+      flex-direction:column; 
+      align-items:center; 
+      justify-content:center; 
+      margin-top:50px; 
+      width:100%; 
+      text-align:center; 
+    }
+    h1 { 
+      font-size:36px; 
+      margin-bottom:20px; 
+      color: #2c3e50;
+    }
+    #countryInput, button { 
+      font-size:18px; 
+      padding:10px; 
+      border-radius: 5px;
+      border: 1px solid #ddd;
+    }
+    #countryInput { 
+      width:250px; 
+      margin-bottom:10px; 
+    }
+    button {
+      background-color: #3498db;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    #result { 
+      margin:30px auto; 
+      text-align:left; 
+      max-width:600px; 
+      width:90%; 
+      word-wrap:break-word;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .loading {
+      display: none;
+      margin: 20px auto;
+    }
+    .error {
+      color: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Country Information</h1>
+  <input type="text" id="countryInput" placeholder="Type a country name" />
+  <button onclick="getCountryInfo()">Search</button>
+  <div class="loading" id="loading">Loading...</div>
+</div>
+
+<div id="result"></div>
+
+<script>
+
+const callingCodes = {
+  "United States": "+1","Canada": "+1","Bahamas": "+242","Barbados": "+246",
+  "Anguilla": "+264", "British Virgin Islands" : "+284", "US Virgin Islands" : "+340",
+  "Cayman Islands": "+345", "Bermuda": "+441", "Grenada" : "+473", " Turks and Caicos Islands": "+649",
+  "Montserrat": "+664","Northern Mariana Islands": "+670", "Guam" : "+671", "American Samoa": "+684",
+  "Sint Maarten": "+721", "Saint Lucia": "+758","Dominica": "+767","Saint Vincent and the Grenadines": "+784",
+  "Puerto Rico": "+787, +939", "Dominican Republic": "+809, +829, +849","Trinidad and Tobago": "+868",
+  "Nevis": "+869","Saint Kitts and Nevis": "+869","Jamaica": "+658, +876", "Egypt": "+20","South Sudan": "+211",
+  "Morocco":"+212","Algeria":"+213","Tunisia":"+216","Libya":"+218","Gambia":"+220",
+  "Senegal":"+221","Mauritania":"+222","Mali":"+223","Guinea":"+224",
+  "Ivory Coast":"+225","Burkina Faso":"+226","Niger":"+227","Togo":"+228",
+  "Benin":"+229","Mauritius":"+230","Liberia":"+231","Sierra Leone":"+232",
+  "Ghana":"+233","Nigeria":"+234","Chad":"+235","Central African Republic":"+236",
+  "Cameroon":"+237","Cape Verde":"+238","São Tomé and Príncipe":"+239","Equatorial Guinea":"+240",
+  "Gabon":"+241","Congo":"+242","DR Congo":"+243","Angola":"+244",
+  "Guinea-Bissau":"+245","Seychelles":"+248","Sudan":"+249","Rwanda":"+250",
+  "Ethiopia":"+251","Somalia":"+252","Djibouti":"+253","Kenya":"+254",
+  "Tanzania":"+255","Zanzibar":"+255","Uganda":"+256","Burundi":"+257",
+  "Mozambique":"+258","Zambia":"+260","Madagascar":"+261","Zimbabwe":"+263",
+  "Namibia":"+264","Malawi":"+265","Lesotho":"+266","Botswana":"+267",
+  "Eswatini":"+268","Comoros":"+269","South Africa":"+27","Saint Helena":"+290",
+  "Tristan da Cunha":"+290","Eritrea":"+291","Aruba":"+297","Faroe Islands":"+298",
+  "Greenland":"+299","Greece":"+30","Netherlands":"+31","Belgium":"+32",
+  "France":"+33","Spain":"+34","Gibraltar":"+350","Portugal":"+351",
+  "Luxembourg":"+352","Ireland":"+353","Iceland":"+354","Albania":"+355",
+  "Malta":"+356", "Cyprus":"+357","Finland":"+358","Bulgaria":"+359",
+  "Hungary":"+36","Lithuania":"+370","Latvia":"+371","Estonia":"+372",
+  "Moldova":"+373","Armenia":"+374","Belarus":"+375","Andorra":"+376",
+  "Monaco":"+377","San Marino":"+378"," Ukraine":"+380","Serbia":"+381",
+  "Montenegro":"+382","Kosovo":"+383","Croatia":"+385","Slovenia":"+386",
+  "Bosnia and Herzegovina":"+387","North Macedonia":"+389","Italy":"+39",
+  "Romania":"+40","Switzerland":"+41","Czech Republic":"+420","Slovakia":"+421",
+  "Liechtenstein":"+423","Austria":"+43","United Kingdom":"+44","Denmark":"+45",
+  "Sweden":"+46","Norway":"+47","Poland":"+48","Germany":"+49",
+  "Belize":"+501","Guatemala":"+502","El Salvador":"+503","Honduras":"+504",
+  "Nicaragua":"+505","Costa Rica":"+506","Panama":"+507","Haiti":"+509",
+  "Peru":"+51","Mexico":"+52","Cuba":"53","Argentina":"+54",
+  "Brazil":"+55","Chile":"+56","Colombia":"+57","Venezuela":"+58",
+  "Bolivia":"+591","Guyana":"+592","Ecuador":"+593","Paraguay":"+595",
+  "Suriname":"+597","Uruguay":"598","Malaysia":"+60","Australia":"+61",
+  "Indonesia":"+62","Philippines":"+63","New Zealand":"+64","Singapore":"+65",
+  "Thailand":"+66","Timor-Leste":"+670","Papua New Guinea":"+675","Tonga":"+676",
+  "Solomon Islands":"+677","Vanuatu":"+678","Fiji":"+679","Palau":"+680",
+  "Samoa":"+685","Kiribati":"+686","Marshall Islands":"+692","Russia":"+7",
+  "Kazakhstan":"+7","Japan":"+81","South Korea":"+82","Vietnam":"+84",
+  "North Korea":"+850","Cambodia":"+855","Laos":"+856","China":"+86",
+  "Bangladesh":"+880","Taiwan":"+886","Turkey":"+90","Northern Cyprus":"+90(392)",
+  "India":"+91","Pakistan":"+92","Afghanistan":"+93","Sri Lanka":"+94",
+  "Myanmar":"+95","Maldives":"+960","Lebanon":"+961","Jordan":"+962",
+  "Syria":"+963", "Iraq":"+964","Kuwait":"+965","Saudi Arabia":"+966",
+  "Yemen":"+967","Oman":"+968","Palestine":"+970","United Arab Emirates":"+971",
+  "Israel":"+972","Bahrain":"+973","Qatar":"+974","Bhutan":"+975",
+  "Mongolia":"+976","Nepal":"+977","Iran":"+98","Tajikistan":"+992",
+  "Turkmenistan":"+993","Azerbaijan":"+994","Georgia":"+995","Kyrgyzstan":"+996",
+  "Uzbekistan":"+998"
+  
+  
+  
+  
+};
+
+const populationRank = [
+  "China", "India", "United States", "Indonesia", "Pakistan", "Nigeria", "Brazil", "Bangladesh",
+  "Russia", "Mexico", "Japan", "Ethiopia", "Philippines", "Egypt", "Vietnam", "DR Congo", "Turkey",
+  "Iran", "Germany", "Thailand", "United Kingdom", "France", "Italy", "Tanzania", "South Africa",
+  "Myanmar", "Kenya", "South Korea", "Colombia", "Spain", "Uganda", "Argentina", "Algeria",
+  "Sudan", "Ukraine", "Iraq", "Afghanistan", "Poland", "Canada", "Morocco", "Saudi Arabia",
+  "Uzbekistan", "Peru", "Angola", "Malaysia", "Mozambique", "Ghana", "Yemen", "Nepal", "Venezuela",
+  "Madagascar", "Cameroon", "Côte d'Ivoire", "North Korea", "Australia", "Niger", "Sri Lanka",
+  "Burkina Faso", "Mali", "Romania", "Malawi", "Chile", "Kazakhstan", "Zambia", "Guatemala",
+  "Ecuador", "Syria", "Netherlands", "Senegal", "Cambodia", "Chad", "Somalia", "Zimbabwe", "Guinea",
+  "Rwanda", "Benin", "Burundi", "Tunisia", "Bolivia", "Belgium", "Haiti", "Cuba", "South Sudan",
+  "Dominican Republic", "Czech Republic", "Greece", "Jordan", "Portugal", "Azerbaijan", "Sweden",
+  "Honduras", "United Arab Emirates", "Hungary", "Tajikistan", "Belarus", "Austria", "Papua New Guinea",
+  "Serbia", "Israel", "Switzerland", "Togo", "Sierra Leone", "Laos", "Paraguay", "Bulgaria", "Libya",
+  "Lebanon", "Nicaragua", "Kyrgyzstan", "El Salvador", "Turkmenistan", "Singapore", "Denmark",
+  "Finland", "Congo", "Slovakia", "Norway", "Oman", "Palestine", "Costa Rica", "Liberia", "Ireland",
+  "Central African Republic", "New Zealand", "Mauritania", "Panama", "Kuwait", "Croatia", "Moldova",
+  "Georgia", "Eritrea", "Uruguay", "Bosnia and Herzegovina", "Mongolia", "Armenia", "Jamaica",
+  "Qatar", "Albania", "Lithuania", "Namibia", "Gambia", "Botswana", "Gabon", "Lesotho",
+  "North Macedonia", "Slovenia", "Guinea-Bissau", "Latvia", "Bahrain", "Equatorial Guinea",
+  "Trinidad and Tobago", "Estonia", "Timor-Leste", "Mauritius", "Cyprus", "Eswatini", "Djibouti",
+  "Fiji", "Comoros", "Bhutan", "Guyana", "Solomon Islands", "Macao", "Montenegro",
+  "Luxembourg", "Western Sahara", "Suriname", "Cabo Verde", "Maldives", "Malta", "Brunei",
+  "Belize", "Bahamas", "Iceland", "Barbados", "Vanuatu"
+];
+
+
+const areaRank = [
+  "Russia","Canada","China","United States","Brazil","Australia","India","Argentina","Kazakhstan",
+  "Algeria","DR Congo","Greenland","Saudi Arabia","Mexico","Indonesia","Sudan","Libya","Iran","Mongolia",
+  "Peru","Chad","Niger","Angola","Mali","South Africa","Colombia","Ethiopia","Bolivia","Mauritania",
+  "Egypt","Tanzania","Nigeria","Venezuela","Pakistan","Namibia","Mozambique","Turkey","Chile","Zambia","Myanmar",
+  "Afghanistan","South Sudan","France","Somalia","Central African Republic","Ukraine","Madagascar","Botswana","Kenya",
+  "Thailand","Spain","Turkmenistan","Cameroon","Papua New Guinea","Yemen","Sweden","Uzbekistan",
+  "Morocco","Iraq","Paraguay","Zimbabwe","Norway","Japan","Germany","Republic of the Congo","Finland","Vietnam","Malaysia",
+  "Ivory Coast","Poland","Oman","Italy","Philippines","Ecuador","Burkina Faso","New Zealand","Gabon",
+  "Guinea","United Kingdom","Uganda","Ghana","Romania","Laos","Guyana","Belarus","Kyrgyzstan",
+  "Senegal","Syria","Cambodia","Uruguay","Suriname","Tunisia","Bangladesh","Nepal","Tajikistan",
+  "Greece","Nicaragua","North Korea","Malawi","Eritrea","Benin","Honduras","Liberia","Bulgaria",
+  "Cuba","Guatemala","Iceland","South Korea","Hungary","Portugal","Jordan","Serbia","Azerbaijan","Austria",
+  "United Arab Emirates","Czech Republic","Panama","Sierra Leone","Ireland","Georgia","Sri Lanka",
+  "Lithuania","Latvia","Togo","Croatia","Bosnia and Herzegovina","Costa Rica","Slovakia","Dominican Republic","Estonia",
+  "Denmark","Netherlands","Switzerland","Bhutan","Guinea-Bissau","Taiwan","Moldova","Belgium","Lesotho","Armenia","Solomon Islands",
+  "Albania","Equatorial Guinea","Burundi","Haiti","Rwanda","North Macedonia","Djibouti","Belize","Israel","El Salvador",
+  "Slovenia","Fiji","Kuwait","Eswatini","Timor-Leste","Bahamas","Montenegro","Vanuatu",
+  "Qatar","Gambia","Jamaica","Lebanon","Cyprus","Palestine","Brunei","Trinidad and Tobago",
+  "Cape Verde","Samoa","Luxembourg","Mauritius","Comoros","Sao Tome and Principe","Kiribati",
+  "Bahrain","Dominica","Tonga","Singapore","Micronesia","Saint Lucia",
+  "Andorra","Palau","Seychelles","Antiguaa and Barbuda","Barbados",
+  "Saint Vincent","Grenada","Malta","Maldives","Saint Kitts and Nevis",
+  "Marshall Islands","Liechtenstein","San Marino"
+];
+
+
+const currencyPower = [
+  "KWD","BHD","OMR","JOD","GIP","SHP","GBP","KYD","CHF","EUR",
+  "BSD","BMD","USD","PAB","BND","SGD","CAD","AUD","NZD","AZN",
+  "BAM","BGN","AWG","ANG","BBD","BZD","FJD","TOP","GEL","XCD",
+  "WST","TND","BYN","TMT","PGK","QAR","AED","PEN","SAR","ILS",
+  "PLN","RON","MYR","LYD","BRL","TTD","DKK","BOB","CNY","HKD",
+  "GTQ","MOP","SBD","MAD","NOK","SEK","TJS","GHS","SCR","BWP",
+  "ERN","MVR","MXN","MDL","SZL","LSL","NAD","ZAR","ZMW","STN",
+  "SLE","CZK","CUP","HNL","TRY","EGP","VES","THB","NIO","UAH",
+  "UYU","MRU","SRD","MUR","ETB","MKD","DOP","PHP","GMD","MZN",
+  "BTN","INR","AFN","KGS","RUB","ALL","CVE","RSD","BDT","XPF",
+  "KPW","VUV","ISK","NPR","DZD","HTG","KES","JPY","JMD","DJF",
+  "LRD","GYD","PKR","LKR","HUF","ARS","AMD","KMF","KZT","YER",
+  "CRC","XOF","XAF","SDG","NGN","AOA","CLP","SSP","MWK","RWF",
+  "IQD","KRW","MMK","CDF","TZS","BIF","MNT","UGX","COP","KHR",
+  "MGA","ZWL","PYG","GNF","SYP","UZS","IDR","LAK","VND","SOS",
+  "LBP","IRR"
+];
+
+function getSuffix(n) {
+  const mod100 = n % 100;
+  if (mod100 > 10 && mod100 < 14) return 'th';
+  switch (n % 10) {
+    case 1: return 'st';
+    case 2: return 'nd';
+    case 3: return 'rd';
+    default: return 'th';
+  }
+}
+
+function getCountryInfo() {
+  const name = document.getElementById('countryInput').value.trim();
+  if (!name) {
+    document.getElementById('result').innerHTML = '<p class="error">Please enter a country name</p>';
+    return;
+  }
+
+  const resultDiv = document.getElementById('result');
+  const loading = document.getElementById('loading');
+  
+  resultDiv.innerHTML = '';
+  loading.style.display = 'block';
+
+  const url = `https://restcountries.com/v3.1/name/${encodeURIComponent(name)}?fullText=true`;
+
+  fetch(url)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Country not found');
+      }
+      return response.json();
+    })
+.then(data => {
+  loading.style.display = 'none';
+  const country = data[0];
+  const popIdx = populationRank.findIndex(c => c.toLowerCase() === country.name.common.toLowerCase());
+  const arIdx = areaRank.findIndex(c => c.toLowerCase() === country.name.common.toLowerCase());
+  const currencies = country.currencies || {};
+  const currencyCodes = Object.keys(currencies);
+  
+  let currencyInfo = 'N/A';
+  if (currencyCodes.length > 0) {
+    currencyInfo = currencyCodes.map(code => {
+      const curIdx = currencyPower.indexOf(code);
+      const curText = curIdx >= 0 ? `${curIdx + 1}${getSuffix(curIdx + 1)}` : 'N/A';
+      return `${currencies[code].name} (${code}, ${curText})`;
+    }).join(', ');
+  }
+
+  const popText = popIdx >= 0 ? `${popIdx + 1}${getSuffix(popIdx + 1)}` : 'N/A';
+  const arText = arIdx >= 0 ? `${arIdx + 1}${getSuffix(arIdx + 1)}` : 'N/A';
+
+  let capitalTimeText = 'N/A';
+  if (country.timezones && country.timezones.length > 0) {
+    const tz = country.timezones[0];
+    const m = tz.match(/UTC([+\-]\d{1,2})(?::(\d{2}))?/);
+    if (m) {
+      const h = +m[1], mm = m[2] ? +m[2] : 0;
+      const now = new Date();
+      const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+      const loc = new Date(utc + (h * 60 + mm) * 60000);
+      capitalTimeText = loc.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    }
+  }
+
+  // <-- Here you get the calling code
+  const callingCode = callingCodes[country.name.common] || 'N/A';
+
+  resultDiv.innerHTML = `
+    <h2>${country.name.common}</h2>
+    <p><strong>Capital:</strong> ${country.capital?.join(', ') || 'N/A'}</p>
+    <p><strong>Population:</strong> ${country.population.toLocaleString()} (${popText} largest)</p>
+    <p><strong>Area:</strong> ${country.area.toLocaleString()} km² (${arText} largest)</p>
+    <p><strong>Currency:</strong> ${currencyInfo}</p>
+    <p><strong>Official Language(s):</strong> ${Object.values(country.languages || {}).join(", ") || 'N/A'}</p>
+    <p><strong>Continent:</strong> ${country.continents.join(", ")}</p>
+    <p><strong>Time Zone(s):</strong> ${country.timezones.join(", ")}</p>
+    <p><strong>Capital's Local Time:</strong> ${capitalTimeText}</p>
+    <p><strong>Calling Code:</strong> ${callingCode}</p>
+    <p><strong>Flag:</strong><br><img src="${country.flags.png}" width="150" alt="Flag of ${country.name.common}"></p>
+  `;
+})
+
+    .catch(error => {
+      loading.style.display = 'none';
+      resultDiv.innerHTML = `<p class="error">${error.message || 'Error fetching country data. Please try again.'}</p>`;
+    });
+}
+
+// Add keyboard support (Enter key)
+document.getElementById('countryInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    getCountryInfo();
+  }
+});
+</script>
+
+</body>
+</html>
